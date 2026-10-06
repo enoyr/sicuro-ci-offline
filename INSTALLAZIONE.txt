@@ -1,0 +1,39 @@
+SICURO-CODE — CORREZIONE RUNNER OFFLINE — 6 OTTOBRE 2026
+
+Da sostituire nel repository sicuro-code (quality e main):
+  .gitlab-ci.yml
+  ci/build-site.py
+Sono SOLO DUE FILE. Mantenere la configurazione cliente già impostata.
+
+1. Importare una volta l’immagine nel Harbor del cliente.
+   Da una macchina interna con Docker e accesso ad Harbor:
+
+   docker load -i sicuro-ci-tools-2026.10.06-amd64.tar.gz
+   docker login harbor-repoq.idm.difesa.it
+   docker tag sicuro-ci-tools:2026.10.06 harbor-repoq.idm.difesa.it/sicuro/ci-tools:2026.10.06
+   docker push harbor-repoq.idm.difesa.it/sicuro/ci-tools:2026.10.06
+
+   Per produzione ripetere login/tag/push usando harbor-repo.idm.difesa.it.
+   Il progetto Harbor «sicuro» deve esistere e il runner deve poterlo leggere.
+
+2. Copiare i due file da file-da-sostituire/ mantenendo i percorsi.
+   .gitlab-ci.yml è un file nascosto: su Mac usare Cmd+Maiusc+Punto.
+   Commit nel ramo quality e poi main. Avviare la pipeline.
+   Il job validate parte automaticamente; build_publish resta manuale.
+
+Il runner deve avere /var/run/docker.sock montato dentro il job, come confermato.
+Restano valide le variabili esistenti: SICURO_RUNNER_TAG, SICURO_ENV_FILE
+(tipo File) e le credenziali Harbor usate dalla build (SICURO_BUILD_AUTH).
+Il daemon Docker deve già considerare attendibile il certificato Harbor.
+La base runtime/younity-web-portable deve essere presente nel progetto Harbor
+configurato, con digest sha256:f32534b8f34707005fff6dc376c43c633692ef9f5043ace49cef5304b1516e89.
+
+L’immagine contiene Python 3.11.2, PHP 8.2.33, Gitleaks 8.30.1,
+Docker CLI 28.5.1 e Buildx 0.29.1. Nei job non si installano pacchetti.
+La pipeline usa solo il GitLab e l’Harbor interni. La build applicativa
+mantiene --network=none e produce image-digest.txt per il deploy.
+Non cambiano applicazione, database, Helm o Kubernetes.
+
+La cartella immagine/ contiene la ricetta di preparazione per il fornitore.
+DAL CLIENTE NON ESEGUIRE docker build SU QUESTA CARTELLA:
+l’immagine è già pronta nell’archivio; usare solo docker load/tag/push.

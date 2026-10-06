@@ -1,0 +1,42 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        SICURO_CI_IMAGE: harbor-repo.idm.difesa.it/sicuro/ci-tools:2026.10.06
+    - if: '$CI_COMMIT_BRANCH == "quality"'
+      variables:
+        SICURO_CI_IMAGE: harbor-repoq.idm.difesa.it/sicuro/ci-tools:2026.10.06
+    - when: never
+stages: [validate, build]
+default:
+  image:
+    name: "$SICURO_CI_IMAGE"
+    entrypoint: [""]
+  tags: ["$SICURO_RUNNER_TAG"]
+  before_script:
+    - python3 ci/check-runner-network.py
+variables:
+  SICURO_BUILD_ENGINE: docker
+  GIT_SUBMODULE_STRATEGY: none
+  HTTP_PROXY: ""
+  HTTPS_PROXY: ""
+  ALL_PROXY: ""
+  http_proxy: ""
+  https_proxy: ""
+  all_proxy: ""
+validate:
+  stage: validate
+  script:
+    - gitleaks dir . --redact
+    - bash ci/lint-php.sh
+build_publish:
+  environment:
+    name: $CI_COMMIT_BRANCH
+  stage: build
+  needs: [validate]
+  resource_group: sicuro-replica-images
+  script:
+    - bash ci/build-offline.sh
+  artifacts:
+    paths: [image-digest.txt]
+  when: manual
